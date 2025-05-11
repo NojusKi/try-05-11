@@ -2,15 +2,16 @@
   "name": "animal-shelter",
   "private": true,
   "version": "0.0.0",
-  "type": "module",
+  "type": "commonjs",
   "scripts": {
     "dev": "vite",
-    "build:server": "tsc -p tsconfig.server.json",
+    "build:server": "tsc -p tsconfig.server.json && npm run postbuild:server",
     "build": "npm run build:server && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "server": "tsx watch server/index.ts",
-    "start": "node dist/server/index.js"
+    "start": "node dist/server/index.js",
+    "postbuild:server": "node scripts/rename-js-to-cjs.js"
   },
   "dependencies": {
     "@types/cors": "^2.8.17",
