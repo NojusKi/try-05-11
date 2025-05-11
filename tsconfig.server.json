@@ -3,7 +3,9 @@
   "compilerOptions": {
     "outDir": "./dist/server",
     "declaration": true,
-    "declarationMap": true
+    "declarationMap": true,
+    "noEmit": false,
+    "allowImportingTsExtensions": false
   },
   "include": ["server"]
 }
