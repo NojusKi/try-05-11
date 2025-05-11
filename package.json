@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "server": "tsx watch server/index.ts",
-    "start": "concurrently \"npm run server\" \"npm run dev\""
+    "start": "node dist/server/index.js"
   },
   "dependencies": {
     "@types/cors": "^2.8.17",

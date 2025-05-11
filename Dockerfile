@@ -23,7 +23,7 @@ COPY dist/server ./dist/server
 EXPOSE 3000
 
 # Set environment variables
-ENV DB_HOST=host.docker.internal
+ENV DB_HOST=${DB_HOST}
 
 # Start the application
 CMD ["npm", "start"]
