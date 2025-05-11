@@ -22,5 +22,8 @@ COPY dist/server ./dist/server
 # Expose the port the app runs on
 EXPOSE 3000
 
+# Set environment variables
+ENV DB_HOST=host.docker.internal
+
 # Start the application
 CMD ["npm", "start"]
