@@ -1,7 +1,7 @@
 import express from 'express';
-import pool from '../config/database';
+import pool from '../config/database.js';
 import { z } from 'zod';
-import { authenticateToken } from './auth';
+import { authenticateToken } from './auth.js';
 
 const router = express.Router();
 

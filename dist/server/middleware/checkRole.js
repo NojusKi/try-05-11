@@ -1,4 +1,7 @@
-export const checkRole = (allowedRoles) => {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.checkRole = void 0;
+const checkRole = (allowedRoles) => {
     return (req, res, next) => {
         if (!req.user) {
             return res.status(401).json({ error: "Authentication required" });
@@ -9,3 +12,4 @@ export const checkRole = (allowedRoles) => {
         next();
     };
 };
+exports.checkRole = checkRole;

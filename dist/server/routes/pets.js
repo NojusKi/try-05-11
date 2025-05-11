@@ -1,24 +1,29 @@
-import express from 'express';
-import pool from '../config/database';
-import { z } from 'zod';
-import { authenticateToken } from './auth';
-import { checkRole } from '../middleware/checkRole';
-const router = express.Router();
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const database_js_1 = __importDefault(require("../config/database.js"));
+const zod_1 = require("zod");
+const auth_js_1 = require("./auth.js");
+const checkRole_js_1 = require("../middleware/checkRole.js");
+const router = express_1.default.Router();
 // Pet validation schema
-const petSchema = z.object({
-    name: z.string().min(1, "Pet name is required"),
-    type: z.string().min(1, "Pet type is required"),
-    breed: z.string().optional(),
-    age: z.number().min(0, "Age needs to be a positive number"),
-    gender: z.string().optional(),
-    size: z.string().optional(),
-    description: z.string().optional(),
-    image_url: z.string().optional()
+const petSchema = zod_1.z.object({
+    name: zod_1.z.string().min(1, "Pet name is required"),
+    type: zod_1.z.string().min(1, "Pet type is required"),
+    breed: zod_1.z.string().optional(),
+    age: zod_1.z.number().min(0, "Age needs to be a positive number"),
+    gender: zod_1.z.string().optional(),
+    size: zod_1.z.string().optional(),
+    description: zod_1.z.string().optional(),
+    image_url: zod_1.z.string().optional()
 });
 // Get all pets
 router.get('/', async (_req, res) => {
     try {
-        const [pets] = await pool.execute(`SELECT p.*, 
+        const [pets] = await database_js_1.default.execute(`SELECT p.*, 
             COALESCE(
               (SELECT COUNT(*) 
                FROM adoption_requests ar 
@@ -41,12 +46,12 @@ router.get('/', async (_req, res) => {
     }
 });
 // Add new pet (admin only permission)
-router.post('/', authenticateToken, checkRole(['admin']), async (req, res) => {
+router.post('/', auth_js_1.authenticateToken, (0, checkRole_js_1.checkRole)(['admin']), async (req, res) => {
     try {
         console.log('Received pet data:', req.body); // Debug log
         const petData = petSchema.parse(req.body);
         console.log('Validated pet data:', petData); // Debug log
-        const [_result] = await pool.execute(`INSERT INTO pets (
+        const [_result] = await database_js_1.default.execute(`INSERT INTO pets (
                 name, type, breed, age, gender, size, description, image_url, status
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'available')`, [
             petData.name,
@@ -65,7 +70,7 @@ router.post('/', authenticateToken, checkRole(['admin']), async (req, res) => {
     }
     catch (error) {
         console.error('Error adding pet:', error);
-        if (error instanceof z.ZodError) {
+        if (error instanceof zod_1.z.ZodError) {
             return res.status(400).json({
                 success: false,
                 error: error.errors
@@ -81,7 +86,7 @@ router.post('/', authenticateToken, checkRole(['admin']), async (req, res) => {
 router.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const [pets] = await pool.execute('SELECT * FROM pets WHERE id = ?', [id]);
+        const [pets] = await database_js_1.default.execute('SELECT * FROM pets WHERE id = ?', [id]);
         if (!pets.length) {
             return res.status(404).json({
                 success: false,
@@ -102,11 +107,11 @@ router.get('/:id', async (req, res) => {
     }
 });
 // Update pet (admin only)
-router.put('/:id', authenticateToken, checkRole(['admin']), async (req, res) => {
+router.put('/:id', auth_js_1.authenticateToken, (0, checkRole_js_1.checkRole)(['admin']), async (req, res) => {
     try {
         const { id } = req.params;
         const petData = petSchema.parse(req.body);
-        await pool.execute(`UPDATE pets SET
+        await database_js_1.default.execute(`UPDATE pets SET
             name = ?, type = ?, breed = ?, age = ?, gender = ?,
             size = ?, description = ?, image_url = ?
             WHERE id = ?`, [
@@ -127,7 +132,7 @@ router.put('/:id', authenticateToken, checkRole(['admin']), async (req, res) => 
     }
     catch (error) {
         console.error('Error updating pet:', error);
-        if (error instanceof z.ZodError) {
+        if (error instanceof zod_1.z.ZodError) {
             return res.status(400).json({
                 success: false,
                 error: error.errors
@@ -140,10 +145,10 @@ router.put('/:id', authenticateToken, checkRole(['admin']), async (req, res) => 
     }
 });
 // Delete pet (admin only)
-router.delete('/:id', authenticateToken, checkRole(['admin']), async (req, res) => {
+router.delete('/:id', auth_js_1.authenticateToken, (0, checkRole_js_1.checkRole)(['admin']), async (req, res) => {
     try {
         const { id } = req.params;
-        await pool.execute('DELETE FROM pets WHERE id = ?', [id]);
+        await database_js_1.default.execute('DELETE FROM pets WHERE id = ?', [id]);
         res.json({
             success: true,
             message: 'Pet deleted successfully'
@@ -157,4 +162,4 @@ router.delete('/:id', authenticateToken, checkRole(['admin']), async (req, res) 
         });
     }
 });
-export default router;
+exports.default = router;

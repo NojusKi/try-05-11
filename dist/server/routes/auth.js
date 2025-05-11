@@ -1,37 +1,43 @@
-import express from 'express';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import pool from '../config/database';
-import { z } from 'zod';
-const router = express.Router();
-const registerSchema = z.object({
-    fullName: z.string().min(2),
-    email: z.string().email(),
-    password: z.string().min(6),
-    role: z.enum(['user', 'admin']).default('user'),
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.authenticateToken = void 0;
+const express_1 = __importDefault(require("express"));
+const bcryptjs_1 = __importDefault(require("bcryptjs"));
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const database_js_1 = __importDefault(require("../config/database.js"));
+const zod_1 = require("zod");
+const router = express_1.default.Router();
+const registerSchema = zod_1.z.object({
+    fullName: zod_1.z.string().min(2),
+    email: zod_1.z.string().email(),
+    password: zod_1.z.string().min(6),
+    role: zod_1.z.enum(['user', 'admin']).default('user'),
 });
-const loginSchema = z.object({
-    email: z.string().email(),
-    password: z.string()
+const loginSchema = zod_1.z.object({
+    email: zod_1.z.string().email(),
+    password: zod_1.z.string()
 });
-const profileUpdateSchema = z.object({
-    fullName: z.string().min(2).optional(),
-    email: z.string().email().optional(),
-    currentPassword: z.string(),
-    newPassword: z.string().min(6).optional(),
-    preferences: z.object({
-        notifications: z.boolean(),
-        newsletter: z.boolean()
+const profileUpdateSchema = zod_1.z.object({
+    fullName: zod_1.z.string().min(2).optional(),
+    email: zod_1.z.string().email().optional(),
+    currentPassword: zod_1.z.string(),
+    newPassword: zod_1.z.string().min(6).optional(),
+    preferences: zod_1.z.object({
+        notifications: zod_1.z.boolean(),
+        newsletter: zod_1.z.boolean()
     }).optional()
 });
 // verify JWT token (middleware)
-export const authenticateToken = (req, res, next) => {
+const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
     if (!token) {
         return res.status(401).json({ error: 'Authentication required' });
     }
-    jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key', (err, user) => {
+    jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET || 'your-secret-key', (err, user) => {
         if (err) {
             return res.status(403).json({ error: 'Invalid token' });
         }
@@ -39,20 +45,21 @@ export const authenticateToken = (req, res, next) => {
         next();
     });
 };
+exports.authenticateToken = authenticateToken;
 router.post('/register', async (req, res) => {
     try {
         const { fullName, email, password, role } = registerSchema.parse(req.body);
         // Check if email already exists
-        const [existingUsers] = await pool.execute('SELECT id FROM users WHERE email = ?', [email]);
+        const [existingUsers] = await database_js_1.default.execute('SELECT id FROM users WHERE email = ?', [email]);
         if (existingUsers.length > 0) {
             return res.status(400).json({ error: "Email already registered" });
         }
-        const hashedPassword = await bcrypt.hash(password, 10);
-        await pool.execute('INSERT INTO users (full_name, email, password, role) VALUES (?, ?, ?, ?)', [fullName, email, hashedPassword, role || 'user']);
+        const hashedPassword = await bcryptjs_1.default.hash(password, 10);
+        await database_js_1.default.execute('INSERT INTO users (full_name, email, password, role) VALUES (?, ?, ?, ?)', [fullName, email, hashedPassword, role || 'user']);
         res.status(201).json({ message: 'User registered successfully' });
     }
     catch (error) {
-        if (error instanceof z.ZodError) {
+        if (error instanceof zod_1.z.ZodError) {
             return res.status(400).json({ error: error.errors });
         }
         console.error('Registration error:', error);
@@ -63,16 +70,16 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
     try {
         const { email, password } = loginSchema.parse(req.body);
-        const [users] = await pool.execute('SELECT id, email, full_name, password, role FROM users WHERE email = ?', [email]);
+        const [users] = await database_js_1.default.execute('SELECT id, email, full_name, password, role FROM users WHERE email = ?', [email]);
         if (!users.length) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
         const user = users[0];
-        const validPassword = await bcrypt.compare(password, user.password);
+        const validPassword = await bcryptjs_1.default.compare(password, user.password);
         if (!validPassword) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
-        const token = jwt.sign({ userId: user.id, role: user.role }, process.env.JWT_SECRET || 'your-secret-key', { expiresIn: '48h' });
+        const token = jsonwebtoken_1.default.sign({ userId: user.id, role: user.role }, process.env.JWT_SECRET || 'your-secret-key', { expiresIn: '48h' });
         res.json({
             token,
             user: {
@@ -84,7 +91,7 @@ router.post('/login', async (req, res) => {
         });
     }
     catch (error) {
-        if (error instanceof z.ZodError) {
+        if (error instanceof zod_1.z.ZodError) {
             return res.status(400).json({ error: error.errors });
         }
         console.error('Login error:', error);
@@ -92,9 +99,9 @@ router.post('/login', async (req, res) => {
     }
 });
 //getting user profile
-router.get('/profile', authenticateToken, async (req, res) => {
+router.get('/profile', exports.authenticateToken, async (req, res) => {
     try {
-        const [users] = await pool.execute('SELECT id, full_name, email, role, created_at FROM users WHERE id = ?', [req.user.userId]);
+        const [users] = await database_js_1.default.execute('SELECT id, full_name, email, role, created_at FROM users WHERE id = ?', [req.user.userId]);
         if (!users.length) {
             return res.status(404).json({ error: 'User not found' });
         }
@@ -109,15 +116,15 @@ router.get('/profile', authenticateToken, async (req, res) => {
     }
 });
 // user profile update
-router.put('/profile', authenticateToken, async (req, res) => {
+router.put('/profile', exports.authenticateToken, async (req, res) => {
     try {
         const { fullName, email, currentPassword, newPassword, preferences } = profileUpdateSchema.parse(req.body);
         //verifying the current password
-        const [users] = await pool.execute('SELECT * FROM users WHERE id = ?', [req.user.userId]);
+        const [users] = await database_js_1.default.execute('SELECT * FROM users WHERE id = ?', [req.user.userId]);
         if (!users.length) {
             return res.status(404).json({ error: 'User not found' });
         }
-        const validPassword = await bcrypt.compare(currentPassword, users[0].password);
+        const validPassword = await bcryptjs_1.default.compare(currentPassword, users[0].password);
         if (!validPassword) {
             return res.status(401).json({ error: 'Incorrect current password' });
         }
@@ -128,13 +135,13 @@ router.put('/profile', authenticateToken, async (req, res) => {
         if (email)
             updates.email = email;
         if (newPassword)
-            updates.password = await bcrypt.hash(newPassword, 10);
+            updates.password = await bcryptjs_1.default.hash(newPassword, 10);
         if (preferences)
             updates.preferences = JSON.stringify(preferences);
         if (Object.keys(updates).length > 0) {
             const setClauses = Object.keys(updates).map(key => `${key} = ?`).join(', ');
             const values = [...Object.values(updates), req.user.userId];
-            await pool.execute(`UPDATE users SET ${setClauses} WHERE id = ?`, values);
+            await database_js_1.default.execute(`UPDATE users SET ${setClauses} WHERE id = ?`, values);
         }
         res.json({
             success: true,
@@ -142,11 +149,11 @@ router.put('/profile', authenticateToken, async (req, res) => {
         });
     }
     catch (error) {
-        if (error instanceof z.ZodError) {
+        if (error instanceof zod_1.z.ZodError) {
             return res.status(400).json({ error: error.errors });
         }
         console.error('Profile update error:', error);
         res.status(500).json({ error: 'Error updating profile' });
     }
 });
-export default router;
+exports.default = router;

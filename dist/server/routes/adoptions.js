@@ -1,20 +1,25 @@
-import express from 'express';
-import pool from '../config/database';
-import { z } from 'zod';
-import { authenticateToken } from './auth';
-const router = express.Router();
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const database_js_1 = __importDefault(require("../config/database.js"));
+const zod_1 = require("zod");
+const auth_js_1 = require("./auth.js");
+const router = express_1.default.Router();
 // Validation schema for adoption requests
-const adoptionSchema = z.object({
-    petId: z.number(),
-    userId: z.number(),
-    fullName: z.string().min(2, "Full name is required"),
-    email: z.string().email("Valid email is required"),
-    address: z.string().min(5, "Address is required"),
-    experience: z.string().optional(),
-    reason: z.string().min(10, "Please provide a detailed reason for adoption")
+const adoptionSchema = zod_1.z.object({
+    petId: zod_1.z.number(),
+    userId: zod_1.z.number(),
+    fullName: zod_1.z.string().min(2, "Full name is required"),
+    email: zod_1.z.string().email("Valid email is required"),
+    address: zod_1.z.string().min(5, "Address is required"),
+    experience: zod_1.z.string().optional(),
+    reason: zod_1.z.string().min(10, "Please provide a detailed reason for adoption")
 });
 // Submit adoption request
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', auth_js_1.authenticateToken, async (req, res) => {
     try {
         const adoptionData = adoptionSchema.parse(req.body);
         // Verify user is requesting for themselves
@@ -25,7 +30,7 @@ router.post('/', authenticateToken, async (req, res) => {
             });
         }
         // Check if pet is still available
-        const [pets] = await pool.execute('SELECT status FROM pets WHERE id = ?', [adoptionData.petId]);
+        const [pets] = await database_js_1.default.execute('SELECT status FROM pets WHERE id = ?', [adoptionData.petId]);
         if (!pets.length || pets[0].status !== 'available') {
             return res.status(400).json({
                 success: false,
@@ -33,7 +38,7 @@ router.post('/', authenticateToken, async (req, res) => {
             });
         }
         // Start transaction
-        const connection = await pool.getConnection();
+        const connection = await database_js_1.default.getConnection();
         await connection.beginTransaction();
         try {
             // Create adoption request
@@ -55,7 +60,7 @@ router.post('/', authenticateToken, async (req, res) => {
         }
     }
     catch (error) {
-        if (error instanceof z.ZodError) {
+        if (error instanceof zod_1.z.ZodError) {
             return res.status(400).json({
                 success: false,
                 error: error.errors
@@ -69,7 +74,7 @@ router.post('/', authenticateToken, async (req, res) => {
     }
 });
 // Get user's adoption requests
-router.get('/user/:userId', authenticateToken, async (req, res) => {
+router.get('/user/:userId', auth_js_1.authenticateToken, async (req, res) => {
     try {
         // Verify user is requesting their own adoptions
         if (req.user.userId !== parseInt(req.params.userId)) {
@@ -79,7 +84,7 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
             });
         }
         //fetching the adoption requests from the database
-        const [requests] = await pool.execute(`SELECT ar.*, p.name as pet_name, p.image_url, p.breed, p.age, p.type 
+        const [requests] = await database_js_1.default.execute(`SELECT ar.*, p.name as pet_name, p.image_url, p.breed, p.age, p.type 
        FROM adoption_requests ar 
        JOIN pets p ON ar.pet_id = p.id 
        WHERE ar.user_id = ?
@@ -97,4 +102,4 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
         });
     }
 });
-export default router;
+exports.default = router;

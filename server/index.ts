@@ -4,10 +4,10 @@ import dotenv from 'dotenv';
 import helmet from 'helmet';
 import xssClean from 'xss-clean';
 import rateLimit from 'express-rate-limit';
-import authRoutes from './routes/auth';
-import petRoutes from './routes/pets';
-import adoptionRoutes from './routes/adoptions';
-import contactRoutes from './routes/contact';
+import authRoutes from './routes/auth.js';
+import petRoutes from './routes/pets.js';
+import adoptionRoutes from './routes/adoptions.js';
+import contactRoutes from './routes/contact.js';
 
 dotenv.config();
 
